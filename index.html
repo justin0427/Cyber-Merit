@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <!-- 字元編碼設定 -->
+  <meta charset="UTF-8">
+  
+  <!-- 響應式設計 viewport 設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- 頁面標題 -->
+  <title>賽博功德 | Cyber Merit</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 自訂樣式 -->
+  <style>
+    /* CSS 變數定義 - Neon Green 發光效果 */
+    :root {
+      --neon-green: #00ff00;
+      --neon-glow-sm: 0 0 5px var(--neon-green);
+      --neon-glow-md: 0 0 10px var(--neon-green);
+      --neon-glow-lg: 0 0 20px var(--neon-green);
+      --neon-glow-xl: 0 0 30px var(--neon-green);
+    }
+
+    /* 全域樣式 - 深色背景和防止橫向捲軸 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #050505;
+      overflow-x: hidden; /* 防止橫向捲軸 */
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Grid Pattern 背景裝飾 - 賽博龐克風格網格 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 確保內容在網格之上 */
+    #root {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Pulse Glow 呼吸動畫 - 用於 Bug Icon */
+    @keyframes pulse-glow {
+      0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(var(--neon-glow-md));
+      }
+      50% {
+        transform: scale(1.05);
+        filter: drop-shadow(var(--neon-glow-lg));
+      }
+    }
+
+    /* Float Up 飄浮文字動畫 - 向上移動並淡出 */
+    @keyframes float-up {
+      0% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100px);
+        opacity: 0;
+      }
+    }
+
+    /* Click Scale 點擊縮放動畫 - 點擊回饋效果 */
+    @keyframes click-scale {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(0.9);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* 工具類別 - Pulse Glow 動畫 */
+    .animate-pulse-glow {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    /* 工具類別 - Float Up 動畫 */
+    .animate-float-up {
+      animation: float-up 1.5s ease-out forwards;
+    }
+
+    /* 工具類別 - Click Scale 動畫 */
+    .animate-click-scale {
+      animation: click-scale 0.3s ease-in-out;
+    }
+
+    /* Neon Green 文字發光效果 */
+    .text-neon-green {
+      color: var(--neon-green);
+      text-shadow: var(--neon-glow-sm);
+    }
+
+    .text-neon-green-glow {
+      color: var(--neon-green);
+      text-shadow: var(--neon-glow-md);
+    }
+
+    .text-neon-green-glow-lg {
+      color: var(--neon-green);
+      text-shadow: var(--neon-glow-lg);
+    }
+  </style>
+</head>
+<body>
+  <!-- React 應用程式掛載點 -->
+  <div id="root"></div>
+  
+  <!-- React 18 CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  
+  <!-- ReactDOM 18 CDN -->
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel Standalone CDN - 用於在瀏覽器中轉譯 JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- 應用程式主要程式碼 - 使用 text/babel 啟用 JSX 轉譯 -->
+  <script type="text/babel">
+    // ==================== LocalStorage 管理工具函數 ====================
+    
+    /**
+     * 儲存功德值到 LocalStorage
+     * @param {number} count - 要儲存的功德值
+     * @description 將功德值和最後更新時間儲存到瀏覽器的 LocalStorage 中
+     *              包含完整的錯誤處理，確保即使儲存失敗應用程式仍能繼續運作
+     */
+    function saveMeritCount(count) {
+      try {
+        // 建立包含功德值和時間戳記的資料物件
+        const meritData = {
+          count: count,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        // 將資料物件轉換為 JSON 字串並儲存到 LocalStorage
+        localStorage.setItem('cyber-merit-count', JSON.stringify(meritData));
+      } catch (error) {
+        // 如果儲存失敗（例如：LocalStorage 已滿或被禁用），記錄警告但不中斷應用程式
+        console.warn('無法儲存功德值到 LocalStorage:', error);
+        // 應用程式將繼續在記憶體中運作，但資料不會持久化
+      }
+    }
+    
+    /**
+     * 從 LocalStorage 載入功德值
+     * @returns {number} 儲存的功德值，如果不存在則返回 0
+     * @description 從 LocalStorage 讀取功德值，處理各種邊界情況
+     *              包括：空值、無效 JSON、LocalStorage 不可用等
+     */
+    function loadMeritCount() {
+      try {
+        // 從 LocalStorage 讀取資料
+        const storedData = localStorage.getItem('cyber-merit-count');
+        
+        // 如果沒有儲存的資料，返回初始值 0
+        if (!storedData) {
+          return 0;
+        }
+        
+        // 解析 JSON 字串為物件
+        const meritData = JSON.parse(storedData);
+        
+        // 返回功德值，如果解析失敗或資料格式不正確，返回 0
+        return typeof meritData.count === 'number' ? meritData.count : 0;
+      } catch (error) {
+        // 如果讀取或解析失敗，記錄警告並返回初始值 0
+        console.warn('無法從 LocalStorage 載入功德值:', error);
+        return 0;
+      }
+    }
+    
+    /**
+     * 清空 LocalStorage 中的功德值
+     * @description 從 LocalStorage 中移除功德值資料，用於重置功能
+     *              包含錯誤處理以確保操作安全
+     */
+    function clearMeritCount() {
+      try {
+        // 從 LocalStorage 中移除功德值資料
+        localStorage.removeItem('cyber-merit-count');
+      } catch (error) {
+        // 如果清除失敗，記錄警告
+        console.warn('無法清除 LocalStorage 中的功德值:', error);
+      }
+    }
+    
+    // ==================== Web Audio API 音效合成函數 ====================
+    
+    /**
+     * 播放功德音效
+     * @description 使用 Web Audio API 合成電子音效，當使用者點擊 Bug Icon 時播放
+     *              音效特性：正弦波、800Hz 頻率、100ms 持續時間、30% 音量
+     *              包含完整的瀏覽器相容性檢查和錯誤處理
+     * @requirements 1.5, 7.5, 8.2
+     */
+    function playMeritSound() {
+      // 瀏覽器相容性檢查 - 檢查 AudioContext 是否可用
+      // 支援標準的 AudioContext 和 WebKit 前綴版本（用於舊版 Safari）
+      if (!window.AudioContext && !window.webkitAudioContext) {
+        // 如果瀏覽器不支援 Web Audio API，靜默跳過
+        // 應用程式將繼續運作，只是沒有音效
+        return;
+      }
+      
+      try {
+        // 建立 AudioContext 實例 - 音訊處理的核心物件
+        // 使用相容性寫法支援不同瀏覽器
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // 建立 OscillatorNode - 用於產生週期性波形的音訊源
+        const oscillator = audioContext.createOscillator();
+        
+        // 建立 GainNode - 用於控制音量
+        const gainNode = audioContext.createGain();
+        
+        // 設定振盪器類型為正弦波 (sine wave)
+        // 正弦波產生純淨、平滑的電子音效，適合賽博龐克風格
+        oscillator.type = 'sine';
+        
+        // 設定頻率為 800Hz - 高頻電子音，清脆明亮
+        // 頻率越高，音調越高
+        oscillator.frequency.value = 800;
+        
+        // 設定音量為 0.3 (30%) - 避免音效過於刺耳
+        // 音量範圍：0.0 (靜音) 到 1.0 (最大音量)
+        gainNode.gain.value = 0.3;
+        
+        // 連接音訊節點：Oscillator → Gain → Destination (揚聲器)
+        // 這建立了音訊處理鏈：產生音訊 → 調整音量 → 輸出到揚聲器
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // 立即開始播放音效
+        oscillator.start(audioContext.currentTime);
+        
+        // 在 100 毫秒 (0.1 秒) 後停止播放
+        // 短促的音效提供即時回饋，不會干擾使用者體驗
+        oscillator.stop(audioContext.currentTime + 0.1);
+        
+        // 音效播放完畢後清理資源
+        // 在停止時間後關閉 AudioContext，釋放系統資源
+        oscillator.onended = () => {
+          audioContext.close();
+        };
+        
+      } catch (error) {
+        // 如果音效播放失敗（例如：瀏覽器政策限制、權限問題），記錄警告
+        // 應用程式將繼續運作，不會因為音效失敗而中斷
+        console.warn('音效播放失敗:', error);
+      }
+    }
+    
+    // ==================== 震動控制函數 ====================
+    
+    /**
+     * 觸發裝置震動
+     * @description 在支援震動 API 的裝置上觸發短暫震動回饋
+     *              震動持續時間：10 毫秒
+     *              用於增強使用者點擊 Bug Icon 時的觸覺回饋
+     *              如果裝置不支援震動 API，函數將靜默跳過
+     * @requirements 1.4, 8.2
+     */
+    function triggerVibration() {
+      // 檢查瀏覽器是否支援 Vibration API
+      // navigator.vibrate 在大多數現代行動裝置瀏覽器中可用
+      // 桌面瀏覽器通常不支援此 API
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        // 觸發 10 毫秒的震動
+        // 參數可以是單一數字（震動持續時間）或陣列（震動模式）
+        // 10ms 提供輕微的觸覺回饋，不會過於干擾使用者
+        navigator.vibrate(10);
+      }
+      // 如果不支援震動 API，靜默跳過
+      // 這是漸進式增強 (Progressive Enhancement) 的實踐
+      // 應用程式在不支援震動的裝置上仍能正常運作
+    }
+    
+    // ==================== React 組件 ====================
+    
+    /**
+     * ErrorBoundary 組件
+     * @description 錯誤邊界組件，用於捕捉 React 組件樹中的 JavaScript 錯誤
+     *              當子組件拋出錯誤時，ErrorBoundary 會捕捉錯誤並顯示備用 UI
+     *              防止整個應用程式崩潰，提升使用者體驗和應用程式穩定性
+     *              
+     *              功能：
+     *              - 捕捉子組件渲染期間的錯誤
+     *              - 捕捉生命週期方法中的錯誤
+     *              - 捕捉建構函數中的錯誤
+     *              - 顯示友善的錯誤訊息和重新載入按鈕
+     *              - 記錄錯誤資訊到控制台，方便除錯
+     *              
+     *              注意：ErrorBoundary 無法捕捉以下錯誤：
+     *              - 事件處理器中的錯誤（需要使用 try-catch）
+     *              - 非同步程式碼中的錯誤（setTimeout、Promise 等）
+     *              - 伺服器端渲染的錯誤
+     *              - ErrorBoundary 自身拋出的錯誤
+     * 
+     * @requirements 8.2
+     */
+    class ErrorBoundary extends React.Component {
+      /**
+       * 建構函數
+       * @param {Object} props - 組件屬性
+       * @description 初始化組件狀態
+       *              hasError: 標記是否發生錯誤
+       *              error: 儲存錯誤物件
+       *              errorInfo: 儲存錯誤堆疊資訊
+       */
+      constructor(props) {
+        super(props);
+        
+        // 初始化狀態
+        this.state = {
+          hasError: false,    // 是否發生錯誤
+          error: null,        // 錯誤物件
+          errorInfo: null     // 錯誤堆疊資訊
+        };
+      }
+      
+      /**
+       * getDerivedStateFromError 靜態方法
+       * @param {Error} error - 捕捉到的錯誤物件
+       * @returns {Object} 新的狀態物件
+       * @description 當子組件拋出錯誤時，React 會呼叫此方法
+       *              這是一個靜態方法，在渲染階段被呼叫
+       *              用於更新狀態，讓下一次渲染顯示備用 UI
+       *              
+       *              執行時機：
+       *              - 在渲染階段（render phase）執行
+       *              - 在 componentDidCatch 之前執行
+       *              - 必須是純函數，不能有副作用
+       *              
+       *              注意：
+       *              - 這個方法不能執行副作用（如記錄錯誤）
+       *              - 副作用應該在 componentDidCatch 中執行
+       */
+      static getDerivedStateFromError(error) {
+        // 更新狀態，讓下一次渲染顯示備用 UI
+        // 返回的物件會被合併到組件的 state 中
+        return {
+          hasError: true,   // 標記發生錯誤
+          error: error      // 儲存錯誤物件
+        };
+      }
+      
+      /**
+       * componentDidCatch 生命週期方法
+       * @param {Error} error - 捕捉到的錯誤物件
+       * @param {Object} errorInfo - 包含 componentStack 的錯誤資訊物件
+       * @description 當子組件拋出錯誤時，React 會呼叫此方法
+       *              這個方法在 commit phase 執行，可以執行副作用
+       *              用於記錄錯誤資訊、發送錯誤報告等
+       *              
+       *              執行時機：
+       *              - 在 commit phase 執行（DOM 更新後）
+       *              - 在 getDerivedStateFromError 之後執行
+       *              - 可以執行副作用操作
+       *              
+       *              參數說明：
+       *              - error: JavaScript Error 物件，包含錯誤訊息和堆疊
+       *              - errorInfo: React 特定的錯誤資訊，包含組件堆疊追蹤
+       *              
+       *              用途：
+       *              - 記錄錯誤到控制台
+       *              - 發送錯誤報告到錯誤追蹤服務（如 Sentry）
+       *              - 儲存錯誤資訊到狀態，用於顯示詳細錯誤訊息
+       */
+      componentDidCatch(error, errorInfo) {
+        // 記錄錯誤到控制台，方便開發時除錯
+        console.error('ErrorBoundary 捕捉到錯誤:', error);
+        console.error('錯誤堆疊資訊:', errorInfo);
+        
+        // 更新狀態，儲存錯誤資訊
+        // 這些資訊可以在備用 UI 中顯示，幫助使用者或開發者了解錯誤
+        this.setState({
+          errorInfo: errorInfo
+        });
+        
+        // 可選：在生產環境中，可以將錯誤發送到錯誤追蹤服務
+        // 例如：Sentry.captureException(error);
+        // 這有助於監控應用程式的穩定性和追蹤錯誤趨勢
+      }
+      
+      /**
+       * render 方法
+       * @returns {React.ReactElement} React 元素
+       * @description 渲染組件
+       *              如果發生錯誤，顯示備用 UI
+       *              如果沒有錯誤，正常渲染子組件
+       *              
+       *              備用 UI 設計：
+       *              - 顯示友善的錯誤訊息（繁體中文）
+       *              - 提供重新載入按鈕，讓使用者可以嘗試恢復
+       *              - 使用賽博龐克風格，與應用程式整體設計一致
+       *              - 在開發環境中顯示詳細錯誤資訊，方便除錯
+       */
+      render() {
+        // 檢查是否發生錯誤
+        if (this.state.hasError) {
+          // ==================== 錯誤備用 UI ====================
+          // 當發生錯誤時，顯示這個備用介面
+          // 設計原則：友善、清晰、提供解決方案
+          
+          return (
+            <div 
+              style={{
+                // 佈局設定 - 使用 flexbox 垂直置中
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                width: '100%',
+                padding: '2rem',
+                
+                // 背景顏色 - 與應用程式主題一致
+                backgroundColor: '#050505',
+                
+                // 文字顏色 - neon green
+                color: '#00ff00',
+                
+                // 字體設定
+                fontFamily: "'Courier New', 'Consolas', monospace",
+                
+                // 防止橫向捲軸
+                overflowX: 'hidden'
+              }}
+            >
+              {/* ==================== 錯誤圖示 ==================== */}
+              {/* 使用簡單的 SVG 圖示表示錯誤 */}
+              <div style={{ marginBottom: '2rem' }}>
+                <svg
+                  width="80"
+                  height="80"
+                  viewBox="0 0 100 100"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  {/* 警告三角形 */}
+                  <path
+                    d="M 50 10 L 90 80 L 10 80 Z"
+                    fill="none"
+                    stroke="#00ff00"
+                    strokeWidth="3"
+                  />
+                  {/* 驚嘆號 - 上半部 */}
+                  <line
+                    x1="50"
+                    y1="35"
+                    x2="50"
+                    y2="55"
+                    stroke="#00ff00"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                  {/* 驚嘆號 - 下半部（點） */}
+                  <circle
+                    cx="50"
+                    cy="65"
+                    r="3"
+                    fill="#00ff00"
+                  />
+                </svg>
+              </div>
+              
+              {/* ==================== 錯誤標題 ==================== */}
+              <h1 
+                style={{
+                  fontSize: '2rem',
+                  fontWeight: 'bold',
+                  marginBottom: '1rem',
+                  textAlign: 'center',
+                  textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00'
+                }}
+              >
+                系統錯誤 SYSTEM ERROR
+              </h1>
+              
+              {/* ==================== 錯誤訊息 ==================== */}
+              <p 
+                style={{
+                  fontSize: '1rem',
+                  marginBottom: '2rem',
+                  textAlign: 'center',
+                  maxWidth: '600px',
+                  lineHeight: '1.6',
+                  opacity: 0.9
+                }}
+              >
+                應用程式發生錯誤，請嘗試重新載入頁面。<br />
+                如果問題持續發生，請聯繫技術支援。
+              </p>
+              
+              {/* ==================== 重新載入按鈕 ==================== */}
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  // 按鈕尺寸和內距
+                  padding: '1rem 2rem',
+                  
+                  // 邊框樣式
+                  border: '2px solid #00ff00',
+                  borderRadius: '0.5rem',
+                  
+                  // 背景和文字
+                  backgroundColor: 'transparent',
+                  color: '#00ff00',
+                  
+                  // 字體設定
+                  fontSize: '1rem',
+                  fontWeight: 'bold',
+                  fontFamily: "'Courier New', 'Consolas', monospace",
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  
+                  // 滑鼠游標
+                  cursor: 'pointer',
+                  
+                  // 觸控優化
+                  touchAction: 'manipulation',
+                  
+                  // 使用者體驗
+                  userSelect: 'none',
+                  WebkitTouchCallout: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  
+                  // 過渡效果
+                  transition: 'all 0.2s ease',
+                  
+                  // 發光效果
+                  boxShadow: '0 0 10px rgba(0, 255, 0, 0.3)',
+                  
+                  // 移除預設樣式
+                  outline: 'none'
+                }}
+                // Hover 效果
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+                  e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.3)';
+                }}
+                // Active 效果
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'scale(0.95)';
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                重新載入 RELOAD
+              </button>
+              
+              {/* ==================== 開發環境：詳細錯誤資訊 ==================== */}
+              {/* 僅在開發環境中顯示，幫助開發者除錯 */}
+              {/* 在生產環境中，可以移除或隱藏此區塊 */}
+              {this.state.error && (
+                <details 
+                  style={{
+                    marginTop: '3rem',
+                    maxWidth: '800px',
+                    width: '100%',
+                    padding: '1rem',
+                    border: '1px solid rgba(0, 255, 0, 0.3)',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'rgba(0, 255, 0, 0.05)',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <summary 
+                    style={{
+                      fontWeight: 'bold',
+                      marginBottom: '1rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    詳細錯誤資訊（開發者模式）
+                  </summary>
+                  
+                  {/* 錯誤訊息 */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <strong>錯誤訊息：</strong>
+                    <pre 
+                      style={{
+                        marginTop: '0.5rem',
+                        padding: '0.5rem',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: '0.25rem',
+                        overflow: 'auto',
+                        fontSize: '0.75rem',
+                        lineHeight: '1.4'
+                      }}
+                    >
+                      {this.state.error.toString()}
+                    </pre>
+                  </div>
+                  
+                  {/* 錯誤堆疊 */}
+                  {this.state.errorInfo && (
+                    <div>
+                      <strong>組件堆疊：</strong>
+                      <pre 
+                        style={{
+                          marginTop: '0.5rem',
+                          padding: '0.5rem',
+                          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                          borderRadius: '0.25rem',
+                          overflow: 'auto',
+                          fontSize: '0.75rem',
+                          lineHeight: '1.4'
+                        }}
+                      >
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    </div>
+                  )}
+                </details>
+              )}
+            </div>
+          );
+        }
+        
+        // ==================== 正常渲染 ====================
+        // 如果沒有錯誤，正常渲染子組件
+        // this.props.children 是被 ErrorBoundary 包裹的組件
+        return this.props.children;
+      }
+    }
+    
+    /**
+     * FloatingText 組件
+     * @param {Object} props - 組件屬性
+     * @param {string} props.id - 飄浮文字的唯一識別碼
+     * @param {string} props.text - 要顯示的文字內容
+     * @param {number} props.x - 飄浮文字的 X 座標（相對於視窗）
+     * @param {number} props.y - 飄浮文字的 Y 座標（相對於視窗）
+     * @param {Function} props.onAnimationEnd - 動畫結束時的回調函數
+     * @description 飄浮文字組件，用於顯示點擊 Bug Icon 後出現的隨機工程師語錄
+     *              文字會從點擊位置向上飄浮並逐漸淡出
+     *              動畫結束後會自動從 DOM 中移除，避免記憶體洩漏
+     *              使用 absolute positioning 定位到點擊座標
+     *              套用 float-up CSS 動畫實現飄浮效果
+     * @requirements 1.2, 6.3, 6.4, 8.2
+     */
+    function FloatingText({ id, text, x, y, onAnimationEnd }) {
+      // 使用 useRef 來追蹤 DOM 元素，以便監聽動畫事件
+      const textRef = React.useRef(null);
+      
+      // 使用 useEffect 來設定動畫結束事件監聽器
+      React.useEffect(() => {
+        const element = textRef.current;
+        
+        // 如果元素不存在，直接返回
+        if (!element) return;
+        
+        /**
+         * 處理動畫結束事件
+         * @description 當 CSS 動畫完成時觸發，呼叫父組件傳入的回調函數
+         *              這確保飄浮文字在動畫完成後能被正確清理
+         */
+        const handleAnimationEnd = () => {
+          // 呼叫父組件傳入的回調函數，通知動畫已結束
+          // 父組件會根據 id 從狀態中移除此飄浮文字
+          onAnimationEnd(id);
+        };
+        
+        // 監聽 animationend 事件
+        // 當 CSS 動畫完成時，瀏覽器會觸發此事件
+        element.addEventListener('animationend', handleAnimationEnd);
+        
+        // 清理函數：組件卸載時移除事件監聽器
+        // 這是 React 的最佳實踐，防止記憶體洩漏
+        return () => {
+          element.removeEventListener('animationend', handleAnimationEnd);
+        };
+      }, [id, onAnimationEnd]); // 依賴項：當 id 或 onAnimationEnd 改變時重新設定監聽器
+      
+      return (
+        <div
+          ref={textRef}
+          style={{
+            // 使用 absolute positioning 定位到點擊座標
+            position: 'fixed', // 使用 fixed 而非 absolute，確保相對於視窗定位
+            left: `${x}px`,    // X 座標
+            top: `${y}px`,     // Y 座標
+            
+            // 使用 transform 將文字中心對齊到點擊位置
+            // 這樣文字會以點擊點為中心向上飄浮，而不是從左上角開始
+            transform: 'translate(-50%, -50%)',
+            
+            // 確保飄浮文字不會被其他元素遮擋
+            zIndex: 9999,
+            
+            // 防止飄浮文字干擾其他元素的點擊事件
+            pointerEvents: 'none',
+            
+            // 文字樣式 - 賽博龐克風格
+            color: '#00ff00',           // Neon green 顏色
+            fontSize: '1.5rem',         // 字體大小
+            fontWeight: 'bold',         // 粗體
+            fontFamily: 'monospace',    // 等寬字體，符合賽博龐克美學
+            textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00', // Neon 發光效果
+            
+            // 防止文字換行
+            whiteSpace: 'nowrap',
+            
+            // 使用者無法選取飄浮文字
+            userSelect: 'none'
+          }}
+          // 套用 float-up CSS 動畫類別
+          // 這個動畫在 <style> 標籤中定義，會讓文字向上移動並淡出
+          className="animate-float-up"
+        >
+          {text}
+        </div>
+      );
+    }
+    
+    /**
+     * BugIconSVG 組件
+     * @description 賽博龐克風格的 Bug 圖示 SVG
+     *              設計靈感來自電路板晶片和程式錯誤的視覺化
+     *              使用 neon green (#00ff00) 作為主色調
+     *              包含 viewBox 確保在不同尺寸下都能清晰顯示
+     * @requirements 7.4
+     */
+    function BugIconSVG() {
+      return (
+        <svg
+          viewBox="0 0 100 100"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{
+            width: '100%',
+            height: '100%',
+            maxWidth: '200px',
+            maxHeight: '200px'
+          }}
+          aria-label="Bug Icon"
+        >
+          {/* Bug 身體主體 - 圓角矩形代表晶片或 Bug 的核心 */}
+          <rect
+            x="30"
+            y="35"
+            width="40"
+            height="50"
+            rx="8"
+            fill="none"
+            stroke="#00ff00"
+            strokeWidth="2.5"
+          />
+          
+          {/* Bug 頭部 - 圓形代表 Bug 的頭部或晶片的控制單元 */}
+          <circle
+            cx="50"
+            cy="25"
+            r="8"
+            fill="none"
+            stroke="#00ff00"
+            strokeWidth="2.5"
+          />
+          
+          {/* 連接頭部和身體的線條 */}
+          <line
+            x1="50"
+            y1="33"
+            x2="50"
+            y2="35"
+            stroke="#00ff00"
+            strokeWidth="2.5"
+          />
+          
+          {/* Bug 觸角 - 左側 */}
+          <path
+            d="M 42 20 Q 35 15, 30 12"
+            fill="none"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* Bug 觸角 - 右側 */}
+          <path
+            d="M 58 20 Q 65 15, 70 12"
+            fill="none"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* Bug 腳 - 左上 */}
+          <path
+            d="M 30 45 L 15 40"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* Bug 腳 - 左中 */}
+          <path
+            d="M 30 60 L 12 60"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* Bug 腳 - 左下 */}
+          <path
+            d="M 30 75 L 15 80"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* Bug 腳 - 右上 */}
+          <path
+            d="M 70 45 L 85 40"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* Bug 腳 - 右中 */}
+          <path
+            d="M 70 60 L 88 60"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* Bug 腳 - 右下 */}
+          <path
+            d="M 70 75 L 85 80"
+            stroke="#00ff00"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          
+          {/* 晶片內部細節 - 橫線 */}
+          <line
+            x1="35"
+            y1="50"
+            x2="65"
+            y2="50"
+            stroke="#00ff00"
+            strokeWidth="1.5"
+            opacity="0.7"
+          />
+          
+          <line
+            x1="35"
+            y1="60"
+            x2="65"
+            y2="60"
+            stroke="#00ff00"
+            strokeWidth="1.5"
+            opacity="0.7"
+          />
+          
+          <line
+            x1="35"
+            y1="70"
+            x2="65"
+            y2="70"
+            stroke="#00ff00"
+            strokeWidth="1.5"
+            opacity="0.7"
+          />
+          
+          {/* 晶片內部細節 - 中央點 */}
+          <circle
+            cx="50"
+            cy="60"
+            r="3"
+            fill="#00ff00"
+            opacity="0.8"
+          />
+        </svg>
+      );
+    }
+    
+    /**
+     * MeritCounter 組件
+     * @param {Object} props - 組件屬性
+     * @param {number} props.count - 當前功德值
+     * @description 功德計數器組件，用於顯示使用者累積的功德值
+     *              使用 monospace 字體和 neon green 發光效果
+     *              實作響應式設計，在不同裝置上顯示不同字體大小
+     *              - Mobile: text-3xl (1.875rem / 30px)
+     *              - Desktop: text-5xl (3rem / 48px)
+     * @requirements 2.1, 2.3, 2.4, 8.2
+     */
+    function MeritCounter({ count }) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-2">
+          {/* 功德標題 - 使用較小的字體 */}
+          <div className="text-neon-green text-sm md:text-base font-mono tracking-wider">
+            功德值 MERIT
+          </div>
+          
+          {/* 功德計數器 - 主要顯示區域 */}
+          <div 
+            className="text-neon-green-glow-lg text-3xl md:text-5xl font-mono font-bold tracking-wider"
+            style={{
+              // 使用 monospace 字體確保數字對齊
+              fontFamily: "'Courier New', 'Consolas', monospace",
+              // Neon green 發光效果 - 多層陰影創造強烈的發光感
+              textShadow: '0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00',
+              // 字母間距增加，符合賽博龐克美學
+              letterSpacing: '0.1em'
+            }}
+            // ARIA 標籤提供無障礙支援
+            aria-label={`當前功德值：${count}`}
+            // 使用 aria-live 確保螢幕閱讀器能即時通知數值變化
+            aria-live="polite"
+          >
+            {/* 格式化數字顯示，使用千分位分隔符提升可讀性 */}
+            {count.toLocaleString('zh-TW')}
+          </div>
+        </div>
+      );
+    }
+    
+    /**
+     * ResetButton 組件
+     * @param {Object} props - 組件屬性
+     * @param {Function} props.onClick - 點擊事件處理器
+     * @description 重置按鈕組件，用於清空功德值並重置應用程式狀態
+     *              設計風格低調，不干擾主要互動元素
+     *              - 使用 neon green 邊框和透明背景，符合賽博龐克美學
+     *              - 加入 hover 和 active 狀態效果，提供視覺回饋
+     *              - 設定 touch-action: manipulation 確保行動裝置上的觸控反應靈敏
+     *              - 位於畫面底部，方便使用者操作但不會誤觸
+     *              - 支援鍵盤操作（Enter/Space 鍵）提供無障礙支援
+     * @requirements 3.4, 5.5, 8.2
+     */
+    function ResetButton({ onClick }) {
+      /**
+       * 處理鍵盤事件
+       * @param {KeyboardEvent} event - 鍵盤事件物件
+       * @description 當使用者按下 Enter 或 Space 鍵時觸發點擊事件
+       *              提供鍵盤無障礙支援
+       */
+      const handleKeyDown = (event) => {
+        // 檢查是否按下 Enter 鍵或 Space 鍵
+        if (event.key === 'Enter' || event.key === ' ') {
+          // 防止 Space 鍵的預設行為（頁面捲動）
+          event.preventDefault();
+          // 觸發點擊事件處理器
+          onClick(event);
+        }
+      };
+      
+      return (
+        <button
+          // 點擊事件處理器 - 當使用者點擊按鈕時觸發重置功能
+          onClick={onClick}
+          // 鍵盤事件處理器 - 支援 Enter/Space 鍵操作
+          onKeyDown={handleKeyDown}
+          // ARIA label 提供語意化描述
+          aria-label="重置功德值"
+          style={{
+            // 按鈕尺寸和內距
+            padding: '0.75rem 1.5rem',
+            
+            // 邊框樣式 - neon green 邊框，1.5px 寬度
+            border: '1.5px solid #00ff00',
+            borderRadius: '0.375rem', // 圓角 6px
+            
+            // 背景透明，符合低調設計原則
+            backgroundColor: 'transparent',
+            
+            // 文字樣式
+            color: '#00ff00',                    // Neon green 文字顏色
+            fontSize: '0.875rem',                // 14px 字體大小
+            fontWeight: '500',                   // 中等粗細
+            fontFamily: "'Courier New', 'Consolas', monospace", // 等寬字體
+            letterSpacing: '0.05em',             // 字母間距
+            textTransform: 'uppercase',          // 大寫字母，增強科技感
+            
+            // 滑鼠游標設為 pointer，表示可點擊
+            cursor: 'pointer',
+            
+            // touch-action: manipulation 確保觸控反應靈敏
+            // 禁用雙擊縮放等手勢，讓點擊立即響應，沒有 300ms 延遲
+            // 這是行動裝置優化的關鍵設定
+            touchAction: 'manipulation',
+            
+            // 使用者無法選取按鈕文字
+            userSelect: 'none',
+            
+            // 防止長按時出現上下文選單（行動裝置）
+            WebkitTouchCallout: 'none',
+            
+            // 防止觸控時出現高亮效果（行動裝置）
+            WebkitTapHighlightColor: 'transparent',
+            
+            // 過渡效果 - 讓狀態變化更平滑
+            // 包括：背景色、文字顏色、邊框顏色、陰影效果
+            transition: 'all 0.2s ease',
+            
+            // 輕微的發光效果
+            boxShadow: '0 0 5px rgba(0, 255, 0, 0.3)',
+            
+            // 移除瀏覽器預設的按鈕樣式
+            outline: 'none',
+            
+            // 確保按鈕在 z-index 層級上不會被其他元素遮擋
+            position: 'relative',
+            zIndex: 10
+          }}
+          // Hover 效果 - 使用 onMouseEnter 和 onMouseLeave 實現
+          onMouseEnter={(e) => {
+            // Hover 時：背景變為半透明 neon green，文字變為深色
+            e.currentTarget.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+            e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.5)';
+            e.currentTarget.style.borderColor = '#00ff00';
+          }}
+          onMouseLeave={(e) => {
+            // 移除 hover 效果，恢復原始狀態
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.boxShadow = '0 0 5px rgba(0, 255, 0, 0.3)';
+            e.currentTarget.style.borderColor = '#00ff00';
+          }}
+          // Active 效果 - 使用 onMouseDown 和 onMouseUp 實現
+          onMouseDown={(e) => {
+            // 按下時：背景變為更深的 neon green，輕微縮小
+            e.currentTarget.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
+            e.currentTarget.style.transform = 'scale(0.95)';
+            e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.6)';
+          }}
+          onMouseUp={(e) => {
+            // 放開時：恢復 hover 狀態
+            e.currentTarget.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 255, 0, 0.5)';
+          }}
+          // Focus 效果 - 鍵盤導航時顯示明顯的外框
+          onFocus={(e) => {
+            // Focus 時：顯示外框和增強發光效果
+            e.currentTarget.style.outline = '2px solid #00ff00';
+            e.currentTarget.style.outlineOffset = '3px';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 0, 0.6)';
+          }}
+          onBlur={(e) => {
+            // 移除 focus 效果
+            e.currentTarget.style.outline = 'none';
+            e.currentTarget.style.boxShadow = '0 0 5px rgba(0, 255, 0, 0.3)';
+          }}
+        >
+          {/* 按鈕文字 - 使用繁體中文和英文組合 */}
+          重置 RESET
+        </button>
+      );
+    }
+    
+    /**
+     * BugIcon 組件
+     * @param {Object} props - 組件屬性
+     * @param {Function} props.onClick - 點擊事件處理器
+     * @param {boolean} props.isAnimating - 是否正在播放點擊動畫
+     * @description Bug 圖示組件，是應用程式的核心互動元素
+     *              整合 BugIconSVG 圖示並加入互動功能
+     *              - 套用 pulse-glow 呼吸動畫（持續播放）
+     *              - 根據 isAnimating 狀態套用 click-scale 動畫（點擊回饋）
+     *              - 設定 touch-action: manipulation 確保觸控反應靈敏
+     *              - 加入 cursor-pointer 和 hover 效果提升使用者體驗
+     *              - 支援鍵盤操作（Enter/Space 鍵）提供無障礙支援
+     * @requirements 1.3, 4.3, 5.5, 8.2
+     */
+    function BugIcon({ onClick, isAnimating }) {
+      /**
+       * 處理鍵盤事件
+       * @param {KeyboardEvent} event - 鍵盤事件物件
+       * @description 當使用者按下 Enter 或 Space 鍵時觸發點擊事件
+       *              提供鍵盤無障礙支援，讓無法使用滑鼠的使用者也能操作
+       */
+      const handleKeyDown = (event) => {
+        // 檢查是否按下 Enter 鍵（keyCode 13）或 Space 鍵（keyCode 32）
+        if (event.key === 'Enter' || event.key === ' ') {
+          // 防止 Space 鍵的預設行為（頁面捲動）
+          event.preventDefault();
+          // 觸發點擊事件處理器
+          onClick(event);
+        }
+      };
+      
+      return (
+        <div
+          // 點擊事件處理器 - 當使用者點擊或觸碰圖示時觸發
+          onClick={onClick}
+          // 鍵盤事件處理器 - 支援 Enter/Space 鍵操作
+          onKeyDown={handleKeyDown}
+          // tabIndex 設為 0 使元素可被鍵盤 focus
+          // 這是無障礙設計的重要部分，讓鍵盤使用者能夠導航到此元素
+          tabIndex={0}
+          // ARIA role 設為 button，告訴輔助技術這是一個可點擊的按鈕
+          role="button"
+          // ARIA label 提供語意化描述
+          aria-label="點擊累積功德值"
+          style={{
+            // 容器尺寸設定
+            width: '150px',
+            height: '150px',
+            
+            // 在行動裝置上增大尺寸，提升觸控體驗
+            // 使用 CSS 變數實現響應式設計
+            '@media (min-width: 768px)': {
+              width: '200px',
+              height: '200px'
+            },
+            
+            // 滑鼠游標設為 pointer，表示可點擊
+            cursor: 'pointer',
+            
+            // touch-action: manipulation 確保觸控反應靈敏
+            // 這會禁用雙擊縮放等手勢，讓點擊立即響應，沒有 300ms 延遲
+            // 這是行動裝置優化的關鍵設定
+            touchAction: 'manipulation',
+            
+            // 使用者無法選取圖示（防止拖曳時出現選取框）
+            userSelect: 'none',
+            
+            // 防止長按時出現上下文選單（行動裝置）
+            WebkitTouchCallout: 'none',
+            
+            // 防止觸控時出現高亮效果（行動裝置）
+            WebkitTapHighlightColor: 'transparent',
+            
+            // 使用 flexbox 置中 SVG 圖示
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            
+            // 過渡效果 - 讓 hover 和 focus 狀態變化更平滑
+            transition: 'transform 0.2s ease, filter 0.2s ease',
+            
+            // 確保圖示在 z-index 層級上不會被其他元素遮擋
+            position: 'relative',
+            zIndex: 10
+          }}
+          // 動態套用 CSS 類別
+          // - animate-pulse-glow: 持續的呼吸動畫（始終套用）
+          // - animate-click-scale: 點擊縮放動畫（僅在 isAnimating 為 true 時套用）
+          className={`animate-pulse-glow ${isAnimating ? 'animate-click-scale' : ''}`}
+          // 內聯樣式：hover 和 focus 效果
+          // 注意：React 不支援 :hover 偽類，所以我們使用 onMouseEnter/onMouseLeave
+          // 但為了簡化，這裡使用 CSS-in-JS 的方式
+          onMouseEnter={(e) => {
+            // Hover 效果：輕微放大並增強發光效果
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.filter = 'drop-shadow(0 0 30px #00ff00)';
+          }}
+          onMouseLeave={(e) => {
+            // 移除 hover 效果，恢復原始狀態
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.filter = '';
+          }}
+          onFocus={(e) => {
+            // Focus 效果：鍵盤導航時顯示明顯的邊框
+            e.currentTarget.style.outline = '3px solid #00ff00';
+            e.currentTarget.style.outlineOffset = '5px';
+          }}
+          onBlur={(e) => {
+            // 移除 focus 效果
+            e.currentTarget.style.outline = 'none';
+          }}
+        >
+          {/* 渲染 Bug 圖示 SVG */}
+          <BugIconSVG />
+        </div>
+      );
+    }
+    
+    // ==================== 飄浮訊息常數 ====================
+    
+    /**
+     * FLOATING_MESSAGES 常數陣列
+     * @description 預定義的工程師舒壓語錄清單，共 8 個訊息
+     *              當使用者點擊 Bug Icon 時，會從這個陣列中隨機選取一個訊息顯示
+     *              訊息內容包含：
+     *              - Bug -1: 減少一個 Bug
+     *              - Warning -1: 減少一個警告
+     *              - 髮量 +1: 增加髮量（工程師的幽默）
+     *              - 肝指數 -1: 降低肝指數（減少加班）
+     *              - Deploy Success: 部署成功
+     *              - No Conflict: 沒有衝突（Git merge 成功）
+     *              - 乖乖 +1: 增加乖乖（工程師的吉祥物零食）
+     *              - 需求凍結: 需求不再變更（工程師的夢想）
+     * @requirements 6.2
+     */
+    const FLOATING_MESSAGES = [
+      "Bug -1",
+      "Warning -1",
+      "髮量 +1",
+      "肝指數 -1",
+      "Deploy Success",
+      "No Conflict",
+      "乖乖 +1",
+      "需求凍結"
+    ];
+    
+    // ==================== App 主組件 ====================
+    
+    /**
+     * App 組件
+     * @description 應用程式的主要組件，負責整體狀態管理和協調子組件
+     *              管理兩個核心狀態：
+     *              1. meritCount: 當前功德值（number）
+     *              2. floatingTexts: 活躍的飄浮文字陣列（FloatingTextItem[]）
+     *              
+     *              狀態結構：
+     *              - meritCount: number - 當前累積的功德值
+     *              - floatingTexts: Array<{
+     *                  id: string,        // 唯一識別碼，使用 Date.now() 生成
+     *                  text: string,      // 顯示文字，從 FLOATING_MESSAGES 隨機選取
+     *                  x: number,         // X 座標（相對於視窗）
+     *                  y: number          // Y 座標（相對於視窗）
+     *                }>
+     *              
+     *              生命週期：
+     *              - 組件掛載時：從 localStorage 載入功德值
+     *              - 使用者點擊：增加功德值、儲存到 localStorage、新增飄浮文字
+     *              - 動畫結束：移除飄浮文字元素
+     *              - 使用者重置：清空功德值和 localStorage
+     * 
+     * @requirements 2.1, 3.2, 6.2, 8.1, 8.2
+     */
+    function App() {
+      // ==================== React Hooks ====================
+      
+      // 從 React 中解構所需的 Hooks
+      const { useState, useEffect } = React;
+      
+      // ==================== 狀態管理 ====================
+      
+      /**
+       * meritCount 狀態
+       * @type {[number, Function]}
+       * @description 管理當前功德值
+       *              初始值設為 0，會在 useEffect 中從 localStorage 載入實際值
+       *              每次點擊 Bug Icon 時會增加 1
+       *              點擊重置按鈕時會清空為 0
+       */
+      const [meritCount, setMeritCount] = useState(0);
+      
+      /**
+       * floatingTexts 狀態
+       * @type {[Array<FloatingTextItem>, Function]}
+       * @description 管理畫面上所有活躍的飄浮文字
+       *              每個項目包含：id（唯一識別碼）、text（顯示文字）、x（X座標）、y（Y座標）
+       *              當使用者點擊 Bug Icon 時，會新增一個飄浮文字到陣列中
+       *              當飄浮文字動畫結束時，會從陣列中移除該項目
+       *              使用陣列管理多個飄浮文字，支援快速連續點擊
+       */
+      const [floatingTexts, setFloatingTexts] = useState([]);
+      
+      /**
+       * isAnimating 狀態
+       * @type {[boolean, Function]}
+       * @description 管理 Bug Icon 的點擊動畫狀態
+       *              當使用者點擊時設為 true，觸發 click-scale 動畫
+       *              300ms 後自動重置為 false（與動畫持續時間一致）
+       *              用於控制 BugIcon 組件的動畫類別
+       */
+      const [isAnimating, setIsAnimating] = useState(false);
+      
+      // ==================== 副作用處理 ====================
+      
+      /**
+       * useEffect - 組件掛載時從 localStorage 載入功德值
+       * @description 當組件首次渲染時執行，從 localStorage 讀取儲存的功德值
+       *              如果 localStorage 中沒有資料，loadMeritCount() 會返回 0
+       *              這確保使用者重新整理頁面後，功德值仍然保留
+       *              
+       *              執行時機：組件掛載後立即執行（依賴項陣列為空）
+       *              清理函數：無需清理
+       * 
+       * @requirements 3.2, 8.1
+       */
+      useEffect(() => {
+        // 從 localStorage 載入功德值
+        const savedCount = loadMeritCount();
+        
+        // 更新 meritCount 狀態
+        // 如果 localStorage 中沒有資料，savedCount 會是 0
+        setMeritCount(savedCount);
+        
+        // 可選：在控制台記錄載入的功德值（開發時除錯用）
+        console.log('已從 LocalStorage 載入功德值:', savedCount);
+      }, []); // 空依賴項陣列表示只在組件掛載時執行一次
+      
+      // ==================== 事件處理器 ====================
+      // 注意：這些事件處理器將在後續任務中實作
+      // 目前僅提供佔位符，確保組件結構完整
+      
+      /**
+       * handleBugClick 事件處理器
+       * @param {React.MouseEvent} event - 滑鼠點擊事件物件
+       * @description 處理 Bug Icon 點擊事件，執行以下操作：
+       *              1. 增加功德值並儲存到 localStorage
+       *              2. 隨機選取一個工程師語錄
+       *              3. 在點擊位置顯示飄浮文字
+       *              4. 播放音效
+       *              5. 觸發震動（在支援的裝置上）
+       *              6. 觸發點擊動畫
+       * 
+       * @requirements 1.1, 1.2, 1.4, 1.5, 3.1, 6.1, 8.3
+       */
+      const handleBugClick = (event) => {
+        // ==================== 步驟 1: 增加功德值並儲存 ====================
+        
+        // 計算新的功德值（當前值 + 1）
+        const newCount = meritCount + 1;
+        
+        // 更新 meritCount 狀態
+        // 使用直接賦值而非函數式更新，因為我們已經計算好新值
+        setMeritCount(newCount);
+        
+        // 立即儲存新的功德值到 localStorage
+        // 這確保即使使用者立即關閉頁面，功德值也不會丟失
+        // saveMeritCount 函數會處理所有錯誤情況，確保應用程式穩定運作
+        saveMeritCount(newCount);
+        
+        // ==================== 步驟 2: 隨機選取飄浮訊息 ====================
+        
+        // 從 FLOATING_MESSAGES 陣列中隨機選取一個訊息
+        // Math.random() 產生 0 到 1 之間的隨機數
+        // 乘以陣列長度得到 0 到 length-1 之間的隨機索引
+        // Math.floor() 向下取整得到整數索引
+        const randomIndex = Math.floor(Math.random() * FLOATING_MESSAGES.length);
+        const selectedMessage = FLOATING_MESSAGES[randomIndex];
+        
+        // ==================== 步驟 3: 取得點擊座標 ====================
+        
+        // 從事件物件中取得點擊座標
+        // clientX 和 clientY 是相對於瀏覽器視窗的座標
+        // 這些座標會用於定位飄浮文字的起始位置
+        const clickX = event.clientX;
+        const clickY = event.clientY;
+        
+        // ==================== 步驟 4: 新增飄浮文字到狀態 ====================
+        
+        // 建立新的飄浮文字項目
+        // 使用 Date.now() 生成唯一的 ID（時間戳記）
+        // 這確保即使快速連續點擊，每個飄浮文字都有唯一識別碼
+        const newFloatingText = {
+          id: Date.now().toString(),  // 轉換為字串作為 React key
+          text: selectedMessage,       // 隨機選取的訊息
+          x: clickX,                   // X 座標
+          y: clickY                    // Y 座標
+        };
+        
+        // 將新的飄浮文字加入到 floatingTexts 陣列中
+        // 使用函數式更新確保基於最新狀態進行更新
+        // 使用展開運算符 (...prev) 保留現有的飄浮文字
+        // 這支援同時顯示多個飄浮文字（快速連續點擊）
+        setFloatingTexts(prev => [...prev, newFloatingText]);
+        
+        // ==================== 步驟 5: 播放音效 ====================
+        
+        // 呼叫 playMeritSound 函數播放電子音效
+        // 使用 Web Audio API 合成 800Hz 正弦波，持續 100ms
+        // 函數內部包含完整的錯誤處理和瀏覽器相容性檢查
+        // 如果瀏覽器不支援或播放失敗，會靜默跳過，不影響應用程式運作
+        playMeritSound();
+        
+        // ==================== 步驟 6: 觸發震動 ====================
+        
+        // 呼叫 triggerVibration 函數觸發裝置震動
+        // 在支援 Vibration API 的裝置上觸發 10 毫秒震動
+        // 提供觸覺回饋，增強使用者體驗
+        // 如果裝置不支援震動，會靜默跳過
+        triggerVibration();
+        
+        // ==================== 步驟 7: 觸發點擊動畫 ====================
+        
+        // 設定 isAnimating 狀態為 true，觸發 Bug Icon 的縮放動畫
+        // 這會在 BugIcon 組件上套用 animate-click-scale CSS 類別
+        setIsAnimating(true);
+        
+        // 300 毫秒後自動重置 isAnimating 為 false
+        // 這個時間與 click-scale 動畫的持續時間一致
+        // 重置後，下次點擊時動畫可以再次觸發
+        setTimeout(() => {
+          setIsAnimating(false);
+        }, 300);
+        
+        // ==================== 完成 ====================
+        // 所有步驟執行完畢，使用者會看到：
+        // - 功德值增加 1
+        // - 飄浮文字從點擊位置向上飄浮並淡出
+        // - 聽到電子音效（如果瀏覽器支援）
+        // - 感受到震動（如果裝置支援）
+        // - Bug Icon 產生縮放動畫回饋
+      };
+      
+      /**
+       * resetMerit 事件處理器
+       * @description 處理重置按鈕點擊事件，執行以下操作：
+       *              1. 將 meritCount 狀態重置為 0
+       *              2. 呼叫 clearMeritCount() 清空 localStorage 中的功德值資料
+       *              
+       *              這確保重置功能完整執行：
+       *              - 畫面上的功德計數器立即顯示 0
+       *              - localStorage 中的資料被清除
+       *              - 使用者重新整理頁面後，功德值仍然是 0（而非恢復到重置前的值）
+       * 
+       * @requirements 3.4, 8.2
+       */
+      const resetMerit = () => {
+        // 步驟 1: 將 meritCount 狀態設為 0
+        // 這會立即更新 UI，讓功德計數器顯示 0
+        setMeritCount(0);
+        
+        // 步驟 2: 呼叫 clearMeritCount() 清空 localStorage
+        // 這會從瀏覽器的 LocalStorage 中移除功德值資料
+        // 確保使用者重新整理頁面後，功德值不會恢復到重置前的值
+        // clearMeritCount 函數內部包含錯誤處理，確保操作安全
+        clearMeritCount();
+        
+        // 可選：在控制台記錄重置操作（開發時除錯用）
+        console.log('功德值已重置為 0，LocalStorage 已清空');
+      };
+      
+      /**
+       * removeFloatingText 回調函數
+       * @param {string} id - 要移除的飄浮文字的唯一識別碼
+       * @description 從 floatingTexts 狀態陣列中移除指定 id 的飄浮文字項目
+       *              當飄浮文字的 CSS 動畫完成時，FloatingText 組件會呼叫此函數
+       *              透過 onAnimationEnd 回調通知父組件移除該飄浮文字
+       *              
+       *              移除邏輯：
+       *              - 使用 setFloatingTexts 更新狀態
+       *              - 使用函數式更新確保基於最新狀態進行操作
+       *              - 使用 filter 方法過濾掉指定 id 的項目
+       *              - 保留所有其他飄浮文字項目
+       *              
+       *              為什麼需要移除：
+       *              - 防止 DOM 中累積過多已完成動畫的元素
+       *              - 避免記憶體洩漏（React 會持續追蹤未移除的組件）
+       *              - 確保應用程式效能，特別是在快速連續點擊的情況下
+       *              
+       *              執行時機：
+       *              - FloatingText 組件的 CSS 動畫完成時（1.5 秒後）
+       *              - 透過 animationend 事件自動觸發
+       * 
+       * @requirements 6.4, 8.2
+       */
+      const removeFloatingText = (id) => {
+        // 使用 setFloatingTexts 更新 floatingTexts 狀態
+        // 使用函數式更新 (prev => ...) 確保基於最新的狀態值進行更新
+        // 這在快速連續點擊時特別重要，避免狀態更新衝突
+        setFloatingTexts(prev => 
+          // 使用 filter 方法建立新陣列，排除指定 id 的項目
+          // filter 會遍歷陣列中的每個項目，保留返回 true 的項目
+          // item.id !== id 表示：保留所有 id 不等於要移除的 id 的項目
+          // 結果：指定 id 的飄浮文字被移除，其他飄浮文字保留
+          prev.filter(item => item.id !== id)
+        );
+        
+        // 可選：在控制台記錄移除操作（開發時除錯用）
+        // 這有助於追蹤飄浮文字的生命週期，確認清理機制正常運作
+        console.log(`已移除飄浮文字 ID: ${id}`);
+      };
+      
+      // ==================== JSX 渲染 ====================
+      
+      /**
+       * App 組件的 JSX 結構
+       * @description 組裝應用程式的完整 UI 佈局
+       *              使用 Tailwind CSS 實現響應式設計
+       *              確保在 mobile 和 desktop 裝置上都能正確顯示
+       *              
+       *              佈局結構：
+       *              - 主容器：使用 flexbox 垂直排列，佔滿整個視窗高度
+       *              - 功德計數器：位於頂部，顯示當前功德值
+       *              - Bug Icon：位於中央，是主要的互動元素
+       *              - 重置按鈕：位於底部，提供重置功能
+       *              - 飄浮文字：使用 fixed positioning 覆蓋在其他元素之上
+       *              
+       *              響應式設計：
+       *              - 使用 Tailwind 的響應式類別（sm:, md:, lg:）
+       *              - 在小螢幕上使用較小的間距和字體
+       *              - 在大螢幕上使用較大的間距和字體
+       *              - 確保不會出現橫向捲軸（overflow-x-hidden）
+       * 
+       * @requirements 2.1, 2.2, 5.1, 5.2, 8.2
+       */
+      return (
+        <>
+          {/* ==================== 主容器 ==================== */}
+          {/* 
+            主容器使用 Tailwind CSS 類別建立響應式佈局
+            - flex: 啟用 flexbox 佈局
+            - flex-col: 垂直排列子元素（從上到下）
+            - items-center: 水平置中對齊
+            - justify-between: 垂直方向均勻分布（頂部、中央、底部）
+            - min-h-screen: 最小高度為視窗高度（100vh）
+            - w-full: 寬度為 100%
+            - overflow-x-hidden: 防止橫向捲軸
+            - px-4: 左右內距 1rem（16px）
+            - py-8: 上下內距 2rem（32px）
+            - md:px-8: 在中等螢幕以上，左右內距增加到 2rem
+            - md:py-12: 在中等螢幕以上，上下內距增加到 3rem
+          */}
+          <div className="flex flex-col items-center justify-between min-h-screen w-full overflow-x-hidden px-4 py-8 md:px-8 md:py-12">
+            
+            {/* ==================== 頂部區域：功德計數器 ==================== */}
+            {/* 
+              功德計數器區域
+              - flex-shrink-0: 防止在空間不足時被壓縮
+              - w-full: 寬度為 100%
+              - flex: 啟用 flexbox
+              - justify-center: 水平置中
+              - mb-8: 底部外距 2rem
+              - md:mb-12: 在中等螢幕以上，底部外距增加到 3rem
+            */}
+            <div className="flex-shrink-0 w-full flex justify-center mb-8 md:mb-12">
+              {/* 
+                渲染 MeritCounter 組件
+                - 傳入 meritCount 狀態作為 count prop
+                - 顯示當前累積的功德值
+                - 組件內部已實作響應式字體大小
+              */}
+              <MeritCounter count={meritCount} />
+            </div>
+            
+            {/* ==================== 中央區域：Bug Icon ==================== */}
+            {/* 
+              Bug Icon 區域
+              - flex-grow: 佔據剩餘空間，確保 Bug Icon 始終在中央
+              - flex: 啟用 flexbox
+              - items-center: 垂直置中
+              - justify-center: 水平置中
+              - w-full: 寬度為 100%
+            */}
+            <div className="flex-grow flex items-center justify-center w-full">
+              {/* 
+                渲染 BugIcon 組件
+                - 傳入 handleBugClick 事件處理器
+                - 傳入 isAnimating 狀態控制點擊動畫
+                - 這是應用程式的核心互動元素
+                - 使用者點擊此圖示來累積功德值
+              */}
+              <BugIcon 
+                onClick={handleBugClick}
+                isAnimating={isAnimating}
+              />
+            </div>
+            
+            {/* ==================== 底部區域：重置按鈕 ==================== */}
+            {/* 
+              重置按鈕區域
+              - flex-shrink-0: 防止在空間不足時被壓縮
+              - w-full: 寬度為 100%
+              - flex: 啟用 flexbox
+              - justify-center: 水平置中
+              - mt-8: 頂部外距 2rem
+              - md:mt-12: 在中等螢幕以上，頂部外距增加到 3rem
+            */}
+            <div className="flex-shrink-0 w-full flex justify-center mt-8 md:mt-12">
+              {/* 
+                渲染 ResetButton 組件
+                - 傳入 resetMerit 事件處理器
+                - 使用者點擊此按鈕可以重置功德值為 0
+                - 按鈕設計低調，不會干擾主要互動元素
+              */}
+              <ResetButton onClick={resetMerit} />
+            </div>
+          </div>
+          
+          {/* ==================== 飄浮文字層 ==================== */}
+          {/* 
+            飄浮文字容器
+            - 使用 React Fragment (<></>) 包裹，不產生額外的 DOM 元素
+            - 使用 map 方法遍歷 floatingTexts 陣列
+            - 為每個飄浮文字項目渲染一個 FloatingText 組件
+            - 飄浮文字使用 fixed positioning，覆蓋在其他元素之上
+            - 不會影響主要佈局的排列
+            
+            為什麼使用 map：
+            - 支援同時顯示多個飄浮文字（快速連續點擊）
+            - React 會自動管理每個飄浮文字組件的生命週期
+            - 使用 key prop 幫助 React 識別和追蹤每個組件
+            
+            key prop 的重要性：
+            - 使用唯一的 id 作為 key
+            - 幫助 React 高效地更新和移除組件
+            - 避免不必要的重新渲染
+            - 確保動畫正確執行
+          */}
+          {floatingTexts.map(item => (
+            <FloatingText
+              key={item.id}              // 唯一識別碼，用於 React key
+              id={item.id}               // 傳遞給組件，用於動畫結束時的清理
+              text={item.text}           // 顯示的文字內容（隨機選取的工程師語錄）
+              x={item.x}                 // X 座標（點擊位置）
+              y={item.y}                 // Y 座標（點擊位置）
+              onAnimationEnd={removeFloatingText}  // 動畫結束時的回調函數
+            />
+          ))}
+        </>
+      );
+    }
+    
+    // ==================== 渲染應用程式 ====================
+    
+    /**
+     * 渲染應用程式到 root 元素
+     * @description 使用 ReactDOM.createRoot 建立 React 18 的根節點
+     *              將 App 組件包裹在 ErrorBoundary 中，提供錯誤處理機制
+     *              
+     *              為什麼使用 ErrorBoundary：
+     *              - 捕捉 React 組件樹中的錯誤，防止整個應用程式崩潰
+     *              - 提供友善的錯誤訊息和恢復機制
+     *              - 提升應用程式的穩定性和使用者體驗
+     *              - 在開發環境中提供詳細的錯誤資訊，方便除錯
+     *              
+     *              渲染結構：
+     *              ErrorBoundary (錯誤邊界)
+     *                └── App (主應用程式)
+     *                      ├── MeritCounter (功德計數器)
+     *                      ├── BugIcon (Bug 圖示)
+     *                      ├── FloatingText[] (飄浮文字)
+     *                      └── ResetButton (重置按鈕)
+     * 
+     * @requirements 7.2, 8.2
+     */
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
+  </script>
+</body>
+</html>
